@@ -10,6 +10,7 @@ def drawblocks(screen,blocks,type):
     grey_lock = (100,100,100)
     green = (0,255,0)
     black = (0,0,0)
+    red = (125,0,0)
     if type == "nb":
         for block in blocks:
             pg.draw.rect(screen,grey,(block,[30,30]))
@@ -27,26 +28,31 @@ def drawblocks(screen,blocks,type):
             if len(block) > 1: # check whether key is already there
                 pg.draw.rect(screen, green, ([block[0][0]+10,block[0][1]+10], [10, 10]))
 
+    elif type == "e":
+        for block in blocks:
+            pg.draw.rect(screen, red, (block[:2], [30, 30]))
 
 
-def drawplayer(screen,player):
-    white = (255,255,255)
-    pg.draw.rect(screen, white, (player, [30, 30]))
+def draw_exit_player(screen,exit,player):
+
+    WHITE = (255, 255, 255)
+    screen.fill(BLACK)
+    if exit is not None:
+        pg.draw.rect(screen, WHITE, (exit, [30, 30]), width=2)
+    if player is not None:
+        pg.draw.rect(screen, WHITE, (player, [30, 30]))
 
 
-def del_player(screen,player):
-    black = (0,0,0)
-    pg.draw.rect(screen, black, (player, [30, 30]))
+def drawcon(screen,key_lock_list):  # draw a red line between lock and key
 
+    RED = (255,0,0)
+    for kl in key_lock_list:
+        if len(kl) == 2:
+            xl = kl[1][0] - kl[0][0]    # x length of line
 
-def drawexit(screen,exit):
-    white = (255, 255, 255)
-    pg.draw.rect(screen, white, (exit, [30, 30]),width=2)
-
-
-def del_exit(screen,exit):
-    black = (0, 0, 0)
-    pg.draw.rect(screen, black, (exit, [30, 30]))
+            corner = [kl[0][0] + xl, kl[0][1]]
+            pg.draw.line(screen, RED, kl[0], corner)
+            pg.draw.line(screen, RED, kl[1], corner)
 
 
 def get_block_pos(pos):
@@ -57,11 +63,10 @@ def get_block_pos(pos):
     return [pos[0],pos[1]]
 
 
-def transf_to_dic(blocks,breakable,exit,player,key_lock):
+def transf_to_dic(blocks,breakable,exit,player,key_lock,enemy_list):
 
-    dic = {"player": player, "exit": exit, "blocks": blocks, "breakable": breakable, "key_lock": key_lock}
+    dic = {"player": player, "exit": exit, "blocks": blocks, "breakable": breakable, "key_lock": key_lock, "enemies": enemy_list}
     return dic
-
 
 
 HEIGHT = 900
@@ -75,16 +80,14 @@ pl_tru = False
 ex_tru = False
 editing = False
 
-exit = None
-player = None
-
 block_list = []
 breakable_list = []
 key_lock_list = []
+enemy_list = []
 
-edit = input("Want to edit an existing level? (y/n) ")
+op = input("What operation do you wish to perform? (add - a / edit - e / delete - d)\n> ")
 
-if edit == "y":
+if op == "e":
     lvlnr = int(input("Which level do you want to change? ")) - 1
     f = open("lvl_info", "r")
     data = json.load(f)
@@ -94,19 +97,36 @@ if edit == "y":
     block_list = data[lvlnr]["blocks"]
     breakable_list = data[lvlnr]["breakable"]
     key_lock_list = data[lvlnr]["key_lock"]
+    enemy_list = data[lvlnr]["enemies"]
     editing = True
 
-elif edit == "n":
+elif op == "d":
+    lvlnr = int(input("Which level do you want to delete? ")) - 1
+    try:
+        f = open("lvl_info", "r")
+        data = json.load(f)
+        f.close()
+        del data[lvlnr]
+        f = open("lvl_info", "w")
+        f.write(json.dumps(data))
+        f.close()
+        print("Level removed successfully.")
+    except:
+        print("Something went wrong, check your data.")
+
+elif op == "a":
     exit = None
     player = None
     block_list = []
     breakable_list = []
     key_lock_list = []
+    enemy_list = []
 
 screen = pg.display.set_mode((WIDTH, HEIGHT))
 pg.display.set_caption('Editor')
+keys = pg.key.get_pressed()
 
-while running:
+while running and op != "d":
 
     for event in pg.event.get():
         if event.type == pg.QUIT:
@@ -119,12 +139,15 @@ while running:
                 data = json.load(f)
                 f.close()
                 if editing:
-                    data[lvlnr] = transf_to_dic(block_list, breakable_list, exit, player, key_lock_list)
+                    data[lvlnr] = transf_to_dic(block_list, breakable_list, exit, player, key_lock_list, enemy_list)
+                    print(f"Level {lvlnr + 1} altered successfully.")
                 else:
-                    data.append(transf_to_dic(block_list, breakable_list, exit, player, key_lock_list))
+                    data.append(transf_to_dic(block_list, breakable_list, exit, player, key_lock_list, enemy_list))
+                    print(f"New Level successfully added.")
                 f = open("lvl_info", "w")
                 f.write(json.dumps(data))
                 f.close()
+                running = False
 
             if event.key == pg.K_b:
                 block_pos = get_block_pos(pos)
@@ -134,10 +157,6 @@ while running:
                         breakable_list.remove(block_pos)
                         already_in = True
                         screen.fill(BLACK)
-                        if player is not None:
-                            drawplayer(screen, player)
-                        if exit is not None:
-                            drawexit(screen, exit)
                         break
                 if not already_in:
                     breakable_list.append(block_pos)
@@ -157,8 +176,62 @@ while running:
                 block_pos = get_block_pos(pos)
                 key_lock_list[-1].insert(0, block_pos)
 
-            print(key_lock_list)
-
+            if event.key == pg.K_e:
+                block_pos = get_block_pos(pos)
+                already_in = False
+                for cnt, block in enumerate(enemy_list):
+                    if block[:2] == block_pos:
+                        enemy_list.remove(block)
+                        already_in = True
+                        screen.fill(BLACK)
+                if not already_in:
+                    choosing_dir = True
+                    print("Waiting for direction..")
+                    while choosing_dir:
+                        for event in pg.event.get():
+                            if event.type == pg.KEYDOWN:
+                                if event.key == pg.K_UP:
+                                    direc = "up"
+                                    choosing_dir = False
+                                elif event.key == pg.K_DOWN:
+                                    direc = "down"
+                                    choosing_dir = False
+                                elif event.key == pg.K_RIGHT:
+                                    direc = "right"
+                                    choosing_dir = False
+                                elif event.key == pg.K_LEFT:
+                                    direc = "left"
+                                    choosing_dir = False
+                    choosing_speed = True
+                    speed = ""
+                    print("Waiting for speed..")
+                    while choosing_speed:
+                        for event in pg.event.get():
+                            if event.type == pg.KEYDOWN:
+                                if event.key == pg.K_0:
+                                    speed += "0"
+                                elif event.key == pg.K_1:
+                                     speed += "1"
+                                elif event.key == pg.K_2:
+                                     speed += "2"
+                                elif event.key == pg.K_3:
+                                     speed += "3"
+                                elif event.key == pg.K_4:
+                                     speed += "4"
+                                elif event.key == pg.K_5:
+                                     speed += "5"
+                                elif event.key == pg.K_6:
+                                     speed += "6"
+                                elif event.key == pg.K_7:
+                                     speed += "7"
+                                elif event.key == pg.K_8:
+                                     speed += "8"
+                                elif event.key == pg.K_9:
+                                     speed += "9"
+                                elif event.key == pg.K_RETURN:
+                                    choosing_speed = False
+                    enemy = [block_pos[0],block_pos[1],direc,int(speed)]
+                    enemy_list.append(enemy)
 
 
         if event.type == pg.MOUSEBUTTONUP:
@@ -171,28 +244,19 @@ while running:
                         block_list.remove(block_pos)
                         already_in = True
                         screen.fill(BLACK)
-                        if player is not None:
-                            drawplayer(screen, player)
-                        if exit is not None:
-                            drawexit(screen, exit)
                         break
                 if not already_in:
                     block_list.append(block_pos)
 
             if event.button == 2:
-                if pl_tru:
-                    del_player(screen,player)
                 player = get_block_pos(pos)
-                drawplayer(screen, player)
-                pl_tru = True
             if event.button == 3:
-                if ex_tru:
-                    del_exit(screen,exit)
                 exit = get_block_pos(pos)
-                drawexit(screen, exit)
-                ex_tru = True
 
+    draw_exit_player(screen,exit,player)
     drawblocks(screen,block_list,"nb")
     drawblocks(screen,breakable_list,"b")
     drawblocks(screen, key_lock_list, "lk")
+    drawblocks(screen, enemy_list, "e")
+    drawcon(screen,key_lock_list)
     pg.display.update()

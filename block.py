@@ -18,7 +18,6 @@ class Block:
                          (self.pos[0]+self.size[0]-1,self.pos[1]+self.size[1]-1),width = 2)
             pg.draw.line(screen, black, (self.pos[0], self.pos[1] + self.size[1]-1),
                          (self.pos[0] + self.size[0]-1, self.pos[1]),width = 2)
-        pg.display.update()
 
     def remove(self,screen):
         black = (0, 0, 0)
