@@ -11,26 +11,64 @@ def drawblocks(screen,blocks,type):
     green = (0,255,0)
     black = (0,0,0)
     red = (125,0,0)
+    orange = (209,148,24)
+    standard_size = 30
+
     if type == "nb":
         for block in blocks:
-            pg.draw.rect(screen,grey,(block,[30,30]))
+            pg.draw.rect(screen,grey,(block,[standard_size,standard_size]))
     elif type == "b":
         for block in blocks:
-            pg.draw.rect(screen,grey,(block,[30,30]))
+            pg.draw.rect(screen,grey,(block,[standard_size,standard_size]))
             pg.draw.line(screen, black, (block[0], block[1]),
-                         (block[0] + 30 - 1, block[1] + 30 - 1), width=2)
-            pg.draw.line(screen, black, (block[0], block[1] + 30 - 1),
-                         (block[0] + 30 - 1, block[1]), width=2)
+                         (block[0] + standard_size - 1, block[1] + standard_size - 1), width=2)
+            pg.draw.line(screen, black, (block[0], block[1] + standard_size - 1),
+                         (block[0] + standard_size - 1, block[1]), width=2)
     elif type == "lk":
         for block in blocks:
-            pg.draw.rect(screen, grey_lock, (block[-1], [30, 30]))
+            pg.draw.rect(screen, grey_lock, (block[-1], [standard_size, standard_size]))
             pg.draw.rect(screen, black, ([block[-1][0]+10,block[-1][1]+10], [10, 10]))
             if len(block) > 1: # check whether key is already there
                 pg.draw.rect(screen, green, ([block[0][0]+10,block[0][1]+10], [10, 10]))
 
     elif type == "e":
+        margin = 5
         for block in blocks:
-            pg.draw.rect(screen, red, (block[:2], [30, 30]))
+            pg.draw.rect(screen, red, (block[:2], [standard_size, standard_size]))
+            if block[2] == "left":
+                pa = [block[0] + margin, block[1] + standard_size / 2]
+                pb = [block[0] + standard_size - margin, block[1] + margin]
+                pc = [block[0] + standard_size - margin, block[1] + standard_size - 5]
+            elif block[2] == "right":
+                pa = [block[0] + standard_size - margin, block[1] + standard_size / 2]
+                pb = [block[0] + margin, block[1] + margin]
+                pc = [block[0] + margin, block[1] + standard_size - 5]
+            elif block[2] == "up":
+                pa = [block[0] + standard_size / 2, block[1] + margin]
+                pb = [block[0] + margin, block[1] + standard_size - margin]
+                pc = [block[0] + standard_size - margin, block[1] + standard_size - 5]
+            elif block[2] == "down":
+                pa = [block[0] + standard_size / 2, block[1] + standard_size - margin]
+                pb = [block[0] + margin, block[1] + margin]
+                pc = [block[0] + standard_size - margin, block[1] + margin]
+            pg.draw.polygon(screen, black, (pa,pb,pc))
+
+    elif type == "plat":
+        for block in blocks:
+            pg.draw.rect(screen, grey, (block[:2], [standard_size, standard_size]))
+            if block[2] == "left":
+                start_pos = block[:2]
+                end_pos = [block[0], block[1]+standard_size - 1]
+            elif block[2] == "right":
+                start_pos = [block[0] + standard_size, block[1]]
+                end_pos = [block[0] + standard_size, block[1] + standard_size - 1]
+            elif block[2] == "up":
+                start_pos = block[:2]
+                end_pos = [block[0] + standard_size - 1, block[1]]
+            elif block[2] == "down":
+                start_pos = [block[0], block[1]+standard_size]
+                end_pos = [block[0] + standard_size - 1, block[1] + standard_size]
+            pg.draw.line(screen, orange, start_pos, end_pos, width=3)
 
 
 def draw_exit_player(screen,exit,player):
@@ -63,9 +101,9 @@ def get_block_pos(pos):
     return [pos[0],pos[1]]
 
 
-def transf_to_dic(blocks,breakable,exit,player,key_lock,enemy_list):
+def transf_to_dic(blocks,breakable,exit,player,key_lock,enemy_list,platform_list):
 
-    dic = {"player": player, "exit": exit, "blocks": blocks, "breakable": breakable, "key_lock": key_lock, "enemies": enemy_list}
+    dic = {"player": player, "exit": exit, "blocks": blocks, "breakable": breakable, "key_lock": key_lock, "enemies": enemy_list, "platforms": platform_list}
     return dic
 
 
@@ -98,6 +136,7 @@ if op == "e":
     breakable_list = data[lvlnr]["breakable"]
     key_lock_list = data[lvlnr]["key_lock"]
     enemy_list = data[lvlnr]["enemies"]
+    platform_list = data[lvlnr]["platforms"]
     editing = True
 
 elif op == "d":
@@ -121,10 +160,12 @@ elif op == "a":
     breakable_list = []
     key_lock_list = []
     enemy_list = []
+    platform_list = []
 
 screen = pg.display.set_mode((WIDTH, HEIGHT))
 pg.display.set_caption('Editor')
 keys = pg.key.get_pressed()
+add_mover = False
 
 while running and op != "d":
 
@@ -139,10 +180,10 @@ while running and op != "d":
                 data = json.load(f)
                 f.close()
                 if editing:
-                    data[lvlnr] = transf_to_dic(block_list, breakable_list, exit, player, key_lock_list, enemy_list)
+                    data[lvlnr] = transf_to_dic(block_list, breakable_list, exit, player, key_lock_list, enemy_list, platform_list)
                     print(f"Level {lvlnr + 1} altered successfully.")
                 else:
-                    data.append(transf_to_dic(block_list, breakable_list, exit, player, key_lock_list, enemy_list))
+                    data.append(transf_to_dic(block_list, breakable_list, exit, player, key_lock_list, enemy_list, platform_list))
                     print(f"New Level successfully added.")
                 f = open("lvl_info", "w")
                 f.write(json.dumps(data))
@@ -177,11 +218,19 @@ while running and op != "d":
                 key_lock_list[-1].insert(0, block_pos)
 
             if event.key == pg.K_e:
+                mover_list = enemy_list
+                add_mover = True
+
+            if event.key == pg.K_p:
+                mover_list = platform_list
+                add_mover = True
+
+            if add_mover:
                 block_pos = get_block_pos(pos)
                 already_in = False
-                for cnt, block in enumerate(enemy_list):
+                for cnt, block in enumerate(mover_list):
                     if block[:2] == block_pos:
-                        enemy_list.remove(block)
+                        mover_list.remove(block)
                         already_in = True
                         screen.fill(BLACK)
                 if not already_in:
@@ -230,8 +279,9 @@ while running and op != "d":
                                      speed += "9"
                                 elif event.key == pg.K_RETURN:
                                     choosing_speed = False
-                    enemy = [block_pos[0],block_pos[1],direc,int(speed)]
-                    enemy_list.append(enemy)
+                    mover = [block_pos[0],block_pos[1],direc,int(speed)]
+                    mover_list.append(mover)
+                add_mover = False
 
 
         if event.type == pg.MOUSEBUTTONUP:
@@ -258,5 +308,6 @@ while running and op != "d":
     drawblocks(screen,breakable_list,"b")
     drawblocks(screen, key_lock_list, "lk")
     drawblocks(screen, enemy_list, "e")
+    drawblocks(screen, platform_list, "plat")
     drawcon(screen,key_lock_list)
     pg.display.update()

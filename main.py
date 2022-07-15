@@ -6,14 +6,14 @@ import mover as en
 import numpy as np
 import json
 import screen_object as so
+import laser as las
+import time
 
-# added mover (enemy)
-# improvements to editor
-# added enemy (mover) to editor
-# added platform (mover)
-# added crushing function
+# cleaning up
+# added platform to editor
+#added laser foundation
 
-
+#SPHERE OF INFLUENCE, LASER ONLY GOES TO PLAYER, COLLISION, VISUALS
 
 dir_dic = {
     "up" : "down",
@@ -47,7 +47,7 @@ def get_all_blocks(lvl_data,sz,type): #type defines the type of object of which 
 
 def get_player(lvl_data,sz):
 
-    return pl.Player(lvl_data[0],lvl_data[1],sz,sz,lvl_data[2],"")
+    return pl.Player(lvl_data[0],lvl_data[1],sz,sz)
 
 
 def get_exit(lvl_data,sz):
@@ -73,7 +73,7 @@ def get_el(lvl_data,sz,type):
     return el
 
 
-def drawlvl(all_blocks,all_lk,enemy_list,plat_list,screen):
+def drawlvl(player,all_blocks,all_lk,enemy_list,plat_list,laser_list,screen):
 
     en_red = (125,0,0)
     grey = (125,125,125)
@@ -88,6 +88,10 @@ def drawlvl(all_blocks,all_lk,enemy_list,plat_list,screen):
     if enemy_list != []:
         for enemy in enemy_list:
             enemy.draw(screen,en_red)
+
+    if laser_list != []:
+        for laser in laser_list:
+            laser.draw(screen,player)
 
     if all_lk != []:
         for key_lock in all_lk:
@@ -163,6 +167,7 @@ screen.blit(ButNG_surface, (WIDTH-buttonWidth-200 + buttonWidth / 2 - ButNG_surf
 
 pg.display.update()
 
+laser_list = [las.Laser(1425,885,10)]
 
 while game:
 
@@ -287,9 +292,10 @@ while game:
                                 delta_y = player.pos[1] % 30
                                 player.pos = [player.pos[0] - delta_x, player.pos[1] - delta_y]
 
+
                     player.draw(screen)
                     exit.draw(screen)
-                    drawlvl(all_breakable, all_lk, enemy_list, plat_list, screen)
+                    drawlvl(player, all_breakable, all_lk, enemy_list, plat_list, laser_list, screen)
                     screen.blit(lvl_surface, (WIDTH - lvl_surface.get_width(), HEIGHT - 30))
                     clock.tick(50)
                     pg.display.update()

@@ -3,11 +3,11 @@ import pygame as pg
 
 class Player:
 
-    def __init__(self,x,y,x_s,y_s,speed,dir):
+    def __init__(self,x,y,x_s,y_s):
         self.pos = [x,y]
         self.size = [x_s,y_s]
-        self.speed = speed # needs divide 30, 900, 1600
-        self.dir = dir
+        self.speed = 10 # needs divide 30, 900, 1600
+        self.dir = ""
 
     def draw(self,screen):
         white = (255, 255, 255)
