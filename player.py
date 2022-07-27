@@ -1,4 +1,5 @@
 import pygame as pg
+import numpy as np
 
 
 class Player:
@@ -89,4 +90,20 @@ class Player:
                                     or (self.pos[0] == platform.pos[0] and self.pos[1] > platform.pos[1] and self.pos[1] < platform.pos[1] + platform.size[1]) \
                                     or (self.pos[0] == platform.pos[0] and self.pos[1] + self.size[1] > platform.pos[1] and self.pos[1] + self.size[1] < platform.pos[1] + platform.size[1]))):
             return True
+        return False
+
+    def laser_collision(self, laser):
+        if laser.firing:
+            cop = [self.pos[0] + self.size[0] / 2, self.pos[1] + self.size[1] / 2]  # player center
+            if laser.pos[0] == laser.laser_end[0]:  # special cases for when laser fires when im in beam running towards it, horizontally or vertically
+                if laser.pos[0] == cop[0]:
+                    return True
+            elif laser.pos[1] == laser.laser_end[1]:
+                if laser.pos[1] == cop[1]:
+                    return True
+            else:
+                t1 = (cop[0] - laser.pos[0]) / (laser.laser_end[0] - laser.pos[0])
+                t2 = (cop[1] - laser.pos[1]) / (laser.laser_end[1] - laser.pos[1])
+                if round(t1 - t2,3) == 0:   # subpar solution with rounding..
+                    return True
         return False

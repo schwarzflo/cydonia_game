@@ -11,9 +11,9 @@ import time
 
 # cleaning up
 # added platform to editor
-#added laser foundation
+# added laser
+# added laser to editor
 
-#SPHERE OF INFLUENCE, LASER ONLY GOES TO PLAYER, COLLISION, VISUALS
 
 dir_dic = {
     "up" : "down",
@@ -62,7 +62,7 @@ def get_lk(lvl_data,sz):
     all_lk = []
     if lvl_data != []:
         for i in range(am):
-            all_lk.append([so.Object(lvl_data[i][0][0],lvl_data[i][0][1],sz_button,sz_button),so.Object(lvl_data[i][1][0],lvl_data[i][1][1],sz,sz)]) # plus 8 to make button smaller
+            all_lk.append([so.Object(lvl_data[i][0][0],lvl_data[i][0][1],sz_button,sz_button),so.Object(lvl_data[i][1][0],lvl_data[i][1][1],sz,sz)])
     return all_lk
 
 
@@ -72,14 +72,22 @@ def get_el(lvl_data,sz,type):
         el.append(en.Mover(enem[0],enem[1],sz,sz,enem[2],enem[3],type))
     return el
 
+def get_l(lvl_data):
+    ll = []
+    for laser in lvl_data:
+        ll.append(las.Laser(laser[0], laser[1], laser[2]))
+    return ll
+
+
 
 def drawlvl(player,all_blocks,all_lk,enemy_list,plat_list,laser_list,screen):
 
     en_red = (125,0,0)
     grey = (125,125,125)
 
-    for block in all_blocks:
-        block.draw(screen)
+    if laser_list != []:
+        for laser in laser_list:
+            laser.draw(screen,player)
 
     if plat_list != []:
         for platform in plat_list:
@@ -88,10 +96,6 @@ def drawlvl(player,all_blocks,all_lk,enemy_list,plat_list,laser_list,screen):
     if enemy_list != []:
         for enemy in enemy_list:
             enemy.draw(screen,en_red)
-
-    if laser_list != []:
-        for laser in laser_list:
-            laser.draw(screen,player)
 
     if all_lk != []:
         for key_lock in all_lk:
@@ -102,6 +106,9 @@ def drawlvl(player,all_blocks,all_lk,enemy_list,plat_list,laser_list,screen):
                 else:
                     color = (125, 125, 125)
                     object.draw_l(screen,color)
+
+    for block in all_blocks:
+        block.draw(screen)
 
 
 def drawblocks(all_blocks,screen):
@@ -167,7 +174,6 @@ screen.blit(ButNG_surface, (WIDTH-buttonWidth-200 + buttonWidth / 2 - ButNG_surf
 
 pg.display.update()
 
-laser_list = [las.Laser(1425,885,10)]
 
 while game:
 
@@ -196,13 +202,14 @@ while game:
                 all_lk = get_lk(lvl["key_lock"],sz)
                 enemy_list = get_el(lvl["enemies"],sz,"enemy")
                 plat_list = get_el(lvl["platforms"],sz,"platform")
+                laser_list = get_l(lvl["lasers"])
 
                 same_lvl = False  # dont replay level by default
                 moving = False
                 playing = True
                 moving_enemy = True
                 pushed = False  # player is currently pushed by platform
-                drawblocks(all_blocks, screen)  # draw parts that dont change, i.e. solid blocks and exit
+                # draw parts that dont change, i.e. solid blocks and exit
 
                 while playing:
 
@@ -244,13 +251,13 @@ while game:
                             if br.pos == coll_block:
                                 all_breakable.remove(br)
 
-                    if all_lk != []: #if no lock key exists, dont check for collision!
-                        for lk in all_lk: #check whether you hit a key
+                    if all_lk != []:    # if no lock key exists, don't check for collision!
+                        for lk in all_lk:   # check whether you hit a key
                             if player.on_lk(lk, 1) is True:
                                 moving = False
                                 player.dir = ""
                             elif player.on_lk(lk, 0) is True:
-                                so.Object(lk[1].pos[0],lk[1].pos[1],lk[1].size[0],lk[1].size[1]).draw(screen,BLACK) #create black square to remove block from screen
+                                so.Object(lk[1].pos[0],lk[1].pos[1],lk[1].size[0],lk[1].size[1]).draw(screen,BLACK)     # create black square to remove block from screen
                                 all_lk.remove(lk)
                                 break
 
@@ -267,6 +274,11 @@ while game:
                         if enemy.block_collision(all_blocks) or enemy.edge_collision(WIDTH, HEIGHT):
                             enemy.dir = dir_dic[enemy.dir]
                         if player.enemy_collision(enemy):
+                            playing = False
+                            same_lvl = True
+
+                    for laser in laser_list:    # check for laser collision
+                        if player.laser_collision(laser):
                             playing = False
                             same_lvl = True
 
@@ -296,6 +308,7 @@ while game:
                     player.draw(screen)
                     exit.draw(screen)
                     drawlvl(player, all_breakable, all_lk, enemy_list, plat_list, laser_list, screen)
+                    drawblocks(all_blocks, screen)
                     screen.blit(lvl_surface, (WIDTH - lvl_surface.get_width(), HEIGHT - 30))
                     clock.tick(50)
                     pg.display.update()

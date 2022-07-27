@@ -12,6 +12,7 @@ def drawblocks(screen,blocks,type):
     black = (0,0,0)
     red = (125,0,0)
     orange = (209,148,24)
+    white = (255,255,255)
     standard_size = 30
 
     if type == "nb":
@@ -70,6 +71,11 @@ def drawblocks(screen,blocks,type):
                 end_pos = [block[0] + standard_size - 1, block[1] + standard_size]
             pg.draw.line(screen, orange, start_pos, end_pos, width=3)
 
+    elif type == "las":
+        for block in blocks:
+            pg.draw.circle(screen, white, block[:2], standard_size / 2)
+            pg.draw.circle(screen, white, block[:2], block[2], width=1)
+
 
 def draw_exit_player(screen,exit,player):
 
@@ -94,17 +100,57 @@ def drawcon(screen,key_lock_list):  # draw a red line between lock and key
 
 
 def get_block_pos(pos):
-
-    pos[0] -= (pos[0] % 30)
-    pos[1] -= (pos[1] % 30)
+    sz = 30
+    pos[0] -= (pos[0] % sz)
+    pos[1] -= (pos[1] % sz)
 
     return [pos[0],pos[1]]
 
 
-def transf_to_dic(blocks,breakable,exit,player,key_lock,enemy_list,platform_list):
+def get_circ_pos(pos):
+    sz = 30
+    pos[0] = pos[0] - (pos[0] % sz) + sz/2
+    pos[1] = pos[1] - (pos[1] % sz) + sz/2
 
-    dic = {"player": player, "exit": exit, "blocks": blocks, "breakable": breakable, "key_lock": key_lock, "enemies": enemy_list, "platforms": platform_list}
+    return [pos[0],pos[1]]
+
+
+def transf_to_dic(blocks,breakable,exit,player,key_lock,enemy_list,platform_list,laser_list):
+
+    dic = {"player": player, "exit": exit, "blocks": blocks, "breakable": breakable, "key_lock": key_lock, "enemies": enemy_list, "platforms": platform_list, "lasers": laser_list}
     return dic
+
+
+def choose_nbr():
+    choosing_speed = True
+    speed = ""
+    while choosing_speed:
+        for event in pg.event.get():
+            if event.type == pg.KEYDOWN:
+                if event.key == pg.K_0:
+                    speed += "0"
+                elif event.key == pg.K_1:
+                    speed += "1"
+                elif event.key == pg.K_2:
+                    speed += "2"
+                elif event.key == pg.K_3:
+                    speed += "3"
+                elif event.key == pg.K_4:
+                    speed += "4"
+                elif event.key == pg.K_5:
+                    speed += "5"
+                elif event.key == pg.K_6:
+                    speed += "6"
+                elif event.key == pg.K_7:
+                    speed += "7"
+                elif event.key == pg.K_8:
+                    speed += "8"
+                elif event.key == pg.K_9:
+                    speed += "9"
+                elif event.key == pg.K_RETURN:
+                    choosing_speed = False
+    return int(speed)
+
 
 
 HEIGHT = 900
@@ -137,6 +183,7 @@ if op == "e":
     key_lock_list = data[lvlnr]["key_lock"]
     enemy_list = data[lvlnr]["enemies"]
     platform_list = data[lvlnr]["platforms"]
+    laser_list = data[lvlnr]["lasers"]
     editing = True
 
 elif op == "d":
@@ -161,6 +208,7 @@ elif op == "a":
     key_lock_list = []
     enemy_list = []
     platform_list = []
+    laser_list = []
 
 screen = pg.display.set_mode((WIDTH, HEIGHT))
 pg.display.set_caption('Editor')
@@ -180,10 +228,10 @@ while running and op != "d":
                 data = json.load(f)
                 f.close()
                 if editing:
-                    data[lvlnr] = transf_to_dic(block_list, breakable_list, exit, player, key_lock_list, enemy_list, platform_list)
+                    data[lvlnr] = transf_to_dic(block_list, breakable_list, exit, player, key_lock_list, enemy_list, platform_list, laser_list)
                     print(f"Level {lvlnr + 1} altered successfully.")
                 else:
-                    data.append(transf_to_dic(block_list, breakable_list, exit, player, key_lock_list, enemy_list, platform_list))
+                    data.append(transf_to_dic(block_list, breakable_list, exit, player, key_lock_list, enemy_list, platform_list, laser_list))
                     print(f"New Level successfully added.")
                 f = open("lvl_info", "w")
                 f.write(json.dumps(data))
@@ -225,6 +273,21 @@ while running and op != "d":
                 mover_list = platform_list
                 add_mover = True
 
+            if event.key == pg.K_c:
+                circ_pos = get_circ_pos(pos)
+                already_in = False
+                for cnt, laser in enumerate(laser_list):
+                    if laser[:2] == circ_pos:
+                        laser_list.remove(laser)
+                        already_in = True
+                        screen.fill(BLACK)
+                        break
+                if not already_in:
+                    choosing_rad = True
+                    print("Waiting for sphere of influence, RETURN to end..")
+                    rad = choose_nbr()
+                    laser_list.append([circ_pos[0],circ_pos[1],rad])
+
             if add_mover:
                 block_pos = get_block_pos(pos)
                 already_in = False
@@ -251,35 +314,9 @@ while running and op != "d":
                                 elif event.key == pg.K_LEFT:
                                     direc = "left"
                                     choosing_dir = False
-                    choosing_speed = True
-                    speed = ""
-                    print("Waiting for speed..")
-                    while choosing_speed:
-                        for event in pg.event.get():
-                            if event.type == pg.KEYDOWN:
-                                if event.key == pg.K_0:
-                                    speed += "0"
-                                elif event.key == pg.K_1:
-                                     speed += "1"
-                                elif event.key == pg.K_2:
-                                     speed += "2"
-                                elif event.key == pg.K_3:
-                                     speed += "3"
-                                elif event.key == pg.K_4:
-                                     speed += "4"
-                                elif event.key == pg.K_5:
-                                     speed += "5"
-                                elif event.key == pg.K_6:
-                                     speed += "6"
-                                elif event.key == pg.K_7:
-                                     speed += "7"
-                                elif event.key == pg.K_8:
-                                     speed += "8"
-                                elif event.key == pg.K_9:
-                                     speed += "9"
-                                elif event.key == pg.K_RETURN:
-                                    choosing_speed = False
-                    mover = [block_pos[0],block_pos[1],direc,int(speed)]
+                    print("Waiting for speed, RETURN to end..")
+                    speed = choose_nbr()
+                    mover = [block_pos[0],block_pos[1],direc,speed]
                     mover_list.append(mover)
                 add_mover = False
 
@@ -309,5 +346,6 @@ while running and op != "d":
     drawblocks(screen, key_lock_list, "lk")
     drawblocks(screen, enemy_list, "e")
     drawblocks(screen, platform_list, "plat")
+    drawblocks(screen, laser_list, "las")
     drawcon(screen,key_lock_list)
     pg.display.update()
